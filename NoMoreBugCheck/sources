@@ -1,0 +1,5 @@
+TARGETNAME=nomorebugcheck
+TARGETTYPE=DRIVER
+SOURCES= driver.cpp
+
+MSC_WARNING_LEVEL=-W3 
