@@ -4,7 +4,8 @@ CHAR KeBugCheckExOrignalBytes[14] = {0};
 ULONG_PTR KeBugCheckExAddress;
 
 extern "C" {
-NTSTATUS Overwrite(PVOID Address, PVOID Data, ULONG Size) {
+NTSTATUS Overwrite(PVOID Address, PVOID Data, ULONG Size)
+{
 	PHYSICAL_ADDRESS PhysAddress = MmGetPhysicalAddress(Address);
 	PVOID MappedAddress = MmMapIoSpace(PhysAddress, Size, MmNonCached);
 
@@ -17,7 +18,8 @@ NTSTATUS Overwrite(PVOID Address, PVOID Data, ULONG Size) {
 }
 
 VOID KeHookedBugCheckEx(ULONG BugCheckCode, ULONG_PTR Code1, ULONG_PTR Code2,
-						ULONG_PTR Code3, ULONG_PTR Code4) {
+						ULONG_PTR Code3, ULONG_PTR Code4)
+{
 	DbgPrint("[*] KeBugCheckEx was called by Process %d, thread id %d\n", PsGetCurrentProcessId(), PsGetCurrentThreadId());
 	DbgPrint("[*] KeBugCheckEx(0x%llx, 0x%llx, 0x%llx, 0x%llx)\n", BugCheckCode,
 			 Code1, Code2, Code3, Code4);
@@ -29,8 +31,8 @@ VOID KeHookedBugCheckEx(ULONG BugCheckCode, ULONG_PTR Code1, ULONG_PTR Code2,
 	KeDelayExecutionThread(KernelMode, FALSE, &Delay);
 }
 
-
-VOID DriverUnload(PDRIVER_OBJECT DriverObject) {
+VOID DriverUnload(PDRIVER_OBJECT DriverObject)
+{
 	UNREFERENCED_PARAMETER(DriverObject);
 	NTSTATUS Status = Overwrite((PVOID)KeBugCheckExAddress, (PVOID)KeBugCheckExOrignalBytes, 14);
 
@@ -43,7 +45,8 @@ VOID DriverUnload(PDRIVER_OBJECT DriverObject) {
 }
 
 NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject,
-					 PUNICODE_STRING RegistryPath) {
+					 PUNICODE_STRING RegistryPath)
+{
 	UNREFERENCED_PARAMETER(RegistryPath);
 
 	DriverObject->DriverUnload = DriverUnload;
@@ -54,10 +57,11 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject,
 	DbgPrint("[*] KeBugCheckEx located at 0x%llx\n", KeBugCheckExAddress);
 	DbgPrint("[*] KeHookedBugCheckEx located at 0x%llx\n", KeHookedBugCheckEx);
 	RtlCopyMemory(KeBugCheckExOrignalBytes, (PVOID)KeBugCheckExAddress, 14);
-	
+
 	if (KeBugCheckExOrignalBytes[0])
 		DbgPrint("[+] Copied over KeBugCheckEx\n");
-	else {
+	else
+	{
 		DbgPrint("[!] Failed to copy\n");
 		return STATUS_FAILED_DRIVER_ENTRY;
 	}
@@ -66,31 +70,30 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject,
 		DbgPrint("[*] KeBugCheckExOrignalBytes[%d]: 0x%x\n", i,
 				 KeBugCheckExOrignalBytes[i] & 0xff);
 
-	#if defined(_M_IX86) && (_M_X64)
-    CHAR Patch() = {
-        __asm {
-            mov r10,
-            jmp r10
-        }
-    };
+#if defined(_M_IX86) || defined(_M_X64)
+	CHAR Patch[] = {
+	    0x49, 0xba, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // mov r10, address
+		0x41, 0xff, 0xe2 // jmp r10
+	};
 
 	ULONG_PTR KeHookedBugCheckExAddress = (ULONG_PTR)KeHookedBugCheckEx;
-	CHAR *KeHookedBugCheckExAddressBytes = (CHAR*)&KeHookedBugCheckExAddress;
+	CHAR *KeHookedBugCheckExAddressBytes = (CHAR *)&KeHookedBugCheckExAddress;
 
 	RtlCopyMemory(&Patch[2], KeHookedBugCheckExAddressBytes, sizeof(ULONG_PTR));
 
-	NTSTATUS Status = Overwrite((PVOID)KeBugCheckExAddress, (PVOID)Patch, sizeof(Patch));
-	
-	if (Status != STATUS_SUCCESS) {
+	NTSTATUS Status = Overwrite((PVOID)KeBugCheckExAddress, (PVOID)&Patch, sizeof(Patch));
+
+	if (Status != STATUS_SUCCESS)
+	{
 		DbgPrint("[!] Failed to overwrite KeBugCheckEx\n");
 		return STATUS_FAILED_DRIVER_ENTRY;
 	}
 
 	DbgPrint("[+] Successfully overwrote KeBugCheckEx\n");
-	#else
+#else
 	DbgPrint("[!] Unknown architecture");
 	return STATUS_FAILED_DRIVER_ENTRY;
-	#endif
+#endif
 
 	CHAR Temp[14] = {0};
 	RtlCopyMemory(Temp, (PVOID)KeBugCheckExAddress, 14);
@@ -100,4 +103,5 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject,
 				 Temp[i] & 0xff);
 
 	return STATUS_SUCCESS;
-}}
+}
+}
