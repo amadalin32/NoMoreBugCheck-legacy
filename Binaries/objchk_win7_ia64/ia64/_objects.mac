@@ -10,7 +10,7 @@ IA64_OBJECTS=\
 # lowercased
 BASEDIR=c:\winddk\7600.16385.1
 OBJECT_ROOT=c:\winddk\7600.16385.1
-MAKEDIR_LOWERCASE=d:\nomorebugcheck-master\nomorebugcheck
-OBJ_PATH=d:\nomorebugcheck-master\nomorebugcheck
+MAKEDIR_LOWERCASE=d:\nomorebugcheck-legacy\nomorebugcheck
+OBJ_PATH=d:\nomorebugcheck-legacy\nomorebugcheck
 CONCURRENT_MIDL=0
 CONCURRENT_MANIFEST_BUILD=0
